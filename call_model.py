@@ -4,6 +4,7 @@ from typing import cast
 from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat import (
+    ChatCompletionMessage,
     ChatCompletionMessageParam,
     ChatCompletionToolUnionParam,
 )
@@ -20,9 +21,10 @@ client = OpenAI(
     api_key=api_key,
 )
 
-def call_model(messages: list[ChatCompletionMessageParam], verbose: bool = False) -> tuple[ChatCompletionMessageParam, list[ChatCompletionMessageParam]]:
-    print("MESSAGES_IN: \n", messages)
-    history_to_add: list[ChatCompletionMessageParam] = []
+
+def call_model(
+    messages: list[ChatCompletionMessageParam], verbose: bool = False
+) -> tuple[ChatCompletionMessage, list[ChatCompletionMessageParam]]:
     response = client.chat.completions.create(
         model="openai/gpt-5.5",
         messages=messages,
@@ -30,29 +32,17 @@ def call_model(messages: list[ChatCompletionMessageParam], verbose: bool = False
         tools=cast(list[ChatCompletionToolUnionParam], avaialble_functions),
     )
 
-    tool_call_result = {}
-    tool_calls = response.choices[0].message.tool_calls
-    is_tool_calls = len(tool_calls) > 0 if tool_calls else False
-    if is_tool_calls and tool_calls:
-        for tc in tool_calls:
-            if tc is not None:
-                history_to_add.append({
-                    "role": "assistant",
-                    "content": f"I want to call {tc.function.name}..."
-                })
-                tool_call_result = call_function(tc, True)
-                history_to_add.append({
-                    "role": "tool",
-                    "tool_call_id": tc.id,
-                    "content": tool_call_result["content"]
-                })
-                content_val = tool_call_result.get("content")
-                if content_val is None or content_val == "None":
-                    raise Exception("Error: result is not as expected...")
+    message = response.choices[0].message
+    history_to_add: list[ChatCompletionMessageParam] = [
+        cast(ChatCompletionMessageParam, message.to_dict())
+    ]
 
-                # return (tool_call_result, messages_copy)
+    for tc in message.tool_calls or []:
+        result_message = call_function(tc, verbose)
+        if result_message.get("content") is None:
+            raise ValueError("Error: tool result has no content")
+        history_to_add.append(result_message)
+        if verbose:
+            print(f"-> {result_message['content']}")
 
-    if verbose:
-        print(f"-> {tool_call_result['content']}")
-
-    return (history_to_add[-1], history_to_add)
+    return message, history_to_add
