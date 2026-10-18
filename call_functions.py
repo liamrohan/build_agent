@@ -5,6 +5,7 @@ from typing import Any
 from openai.types.chat import (
     ChatCompletionMessageToolCall,
     ChatCompletionMessageToolCallUnion,
+    ChatCompletionToolMessageParam,
 )
 
 from functions.get_file_content import get_file_content, schema_get_file_content
@@ -22,7 +23,7 @@ avaialble_functions = [
 
 def call_function(
     tool_call: ChatCompletionMessageToolCallUnion, verbose: bool = False
-) -> dict[str, str]:
+) -> ChatCompletionToolMessageParam:
     fn_id = tool_call.id
     fn_name = ""
     fn_args: dict[str, Any] = {}
@@ -32,9 +33,9 @@ def call_function(
         fn_args = json.loads(tool_call.function.arguments)
 
     if verbose:
-        print(f" - Calling function: {fn_name}({fn_args})")
+        print(f"\n - Calling function: {fn_name}({fn_args})\n")
     else:
-        print(f" - Calling function: {fn_name}")
+        print(f"\n - Calling function: {fn_name}\n")
 
     func_map: dict[str, Callable[..., str]] = {
         "get_file_content": get_file_content,
@@ -53,5 +54,5 @@ def call_function(
 
     fn_args["working_dir"] = "./calculator"
     r = func_map[fn_name](**fn_args)
-    tool_resp = {"role": "tool", "tool_call_id": fn_id, "content": r}
+    tool_resp:ChatCompletionToolMessageParam = {"role": "tool", "tool_call_id": fn_id, "content": r}
     return tool_resp

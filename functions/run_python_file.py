@@ -59,7 +59,7 @@ def run_python_file(
         return_code = output.returncode
         if return_code > 0:
             return f"Process existed with code {return_code}"
-        no_output = output.stderr and output.stdout == ""
+        no_output = output.stderr == "" and output.stdout == ""
         if no_output:
             return f"No output produced"
         return textwrap.dedent(f"""

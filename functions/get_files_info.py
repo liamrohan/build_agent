@@ -1,6 +1,5 @@
-from os import path, listdir
 import textwrap
-
+from os import listdir, path
 
 schema_get_files_info = {
     "type": "function",
