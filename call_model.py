@@ -41,7 +41,11 @@ def call_model(messages: list[ChatCompletionMessageParam], verbose: bool = False
                     "content": f"I want to call {tc.function.name}..."
                 })
                 tool_call_result = call_function(tc, True)
-                history_to_add.append(tool_call_result)
+                history_to_add.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": tool_call_result["content"]
+                })
                 content_val = tool_call_result.get("content")
                 if content_val is None or content_val == "None":
                     raise Exception("Error: result is not as expected...")
